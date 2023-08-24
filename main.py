@@ -20,6 +20,9 @@ from models.satrans import SATrans
 from models.star import Star_Net
 from models.sharedbottom import SharedBottom
 from models.mmoe import MMOE
+from models.mmoe_mt import MMOE_MT
+from models.mmoe_mt_att import MMOE_MT_ATT
+
 from models.ple import PLE
 from models.esmm import ESMM
 from models.wdl import WDL
@@ -279,6 +282,14 @@ if __name__ == '__main__':
                          use_domain_bn=use_domain_bn,
                          seed=seed,
                          device=device,flag=flag)
+    elif model_name in ['MMOE_MT']:
+        model = MMOE_MT(num_domains=num_domains,dnn_feature_columns=dnn_feature_columns, seed=seed, device=device,domain_id_as_feature=True,
+                     task_types=['binary']*num_domains,
+                     task_names=['ctr%d' %(i) for i in range(num_domains)],domain_column=domain_col,flag=flag)
+    elif model_name in ['MMOE_MT_ATT']:
+        model = MMOE_MT_ATT(num_domains=num_domains,dnn_feature_columns=dnn_feature_columns, seed=seed, device=device,domain_id_as_feature=True,
+                     task_types=['binary']*num_domains,
+                     task_names=['ctr%d' %(i) for i in range(num_domains)],domain_column=domain_col,flag=flag)
 
     elif model_name == 'SATrans':
         att_layer_num = 0
@@ -335,7 +346,7 @@ if __name__ == '__main__':
         model.classes_ = lbe.classes_
     # model.cpu()
 
-    if model_name in ['SharedBottom', 'MMOE', 'PLE', 'ESMM']:
+    if model_name in ['SharedBottom', 'MMOE', 'PLE', 'ESMM','MMOE_MT','MMOE_MT_ATT']:
         model.compile(torch.optim.Adam(model.parameters(), lr=learning_rate),
                       ["binary_crossentropy"] * num_domains,
                       metrics=["binary_crossentropy", 'auc'])

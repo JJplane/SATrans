@@ -237,7 +237,127 @@ class SelfAttention_Layer(nn.Module):
 
         return result
 
+class TargetAttention_Layer(nn.Module):
 
+    def __init__(self, embedding_size, head_num=2, use_res=True, scaling=True, seed=1024, device='cpu'):
+        super(TargetAttention_Layer, self).__init__()
+        if head_num <= 0:
+            raise ValueError('head_num must be a int > 0')
+        if embedding_size % head_num != 0:
+            raise ValueError('embedding_size is not an integer multiple of head_num!')
+        self.att_embedding_size = embedding_size // head_num
+        self.head_num = head_num
+        self.use_res = use_res
+        self.scaling = scaling
+        self.seed = seed
+
+        self.W_Query = nn.Parameter(torch.Tensor(embedding_size, embedding_size))
+        self.W_Key = nn.Parameter(torch.Tensor(embedding_size, embedding_size))
+        self.W_Value = nn.Parameter(torch.Tensor(embedding_size, embedding_size))
+        self.W_Out = nn.Parameter(torch.Tensor(embedding_size, embedding_size))
+
+        self.attn_dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(0.1)
+        self.layer_norm = nn.LayerNorm(embedding_size, eps=1e-6)
+
+        if self.use_res:
+            self.W_Res = nn.Parameter(torch.Tensor(embedding_size, embedding_size))
+        for tensor in self.parameters():
+            nn.init.normal_(tensor, mean=0.0, std=0.05)
+
+        self.to(device)
+
+    def forward(self, q,k):
+        q = k
+        v = k
+        if len(q.shape) != 3:
+            raise ValueError(
+                "Unexpected inputs dimensions %d, expect to be 3 dimensions" % (len(q.shape)))
+        # None F D
+        querys = torch.tensordot(q, self.W_Query, dims=([-1], [0]))
+        keys = torch.tensordot(k, self.W_Key, dims=([-1], [0]))
+        values = torch.tensordot(v, self.W_Value, dims=([-1], [0]))
+
+        # head_num None F D/head_num
+        querys = torch.stack(torch.split(querys, self.att_embedding_size, dim=2))
+        keys = torch.stack(torch.split(keys, self.att_embedding_size, dim=2))
+        values = torch.stack(torch.split(values, self.att_embedding_size, dim=2))
+
+        inner_product = torch.einsum('bnik,bnjk->bnij', querys, keys)  # head_num None F F
+        if self.scaling:
+            inner_product /= self.att_embedding_size ** 0.5
+        self.normalized_att_scores = self.attn_dropout(F.softmax(inner_product, dim=-1))  # head_num None F F
+
+        result = torch.matmul(self.normalized_att_scores, values)  # head_num None F D/head_num
+
+        result = torch.cat(torch.split(result, 1, ), dim=-1)
+        result = torch.squeeze(result, dim=0)  # None F D
+        result = self.dropout(result)#=======
+        if self.use_res:
+            result += torch.tensordot(q, self.W_Res, dims=([-1], [0]))
+        result = F.relu(result)
+        result = self.layer_norm(result)#===
+
+        return result
+class Attention_Layer(nn.Module):
+
+    def __init__(self, embedding_size, head_num=2, use_res=True, scaling=True, seed=1024, device='cpu'):
+        super(Attention_Layer, self).__init__()
+        if head_num <= 0:
+            raise ValueError('head_num must be a int > 0')
+        if embedding_size % head_num != 0:
+            raise ValueError('embedding_size is not an integer multiple of head_num!')
+        self.att_embedding_size = embedding_size*4
+        self.head_num = head_num
+        self.use_res = use_res
+        self.scaling = scaling
+        self.seed = seed
+
+        self.W_Query = nn.Parameter(torch.Tensor(embedding_size, self.att_embedding_size))
+        self.W_Key = nn.Parameter(torch.Tensor(embedding_size, self.att_embedding_size))
+        self.W_Value = nn.Parameter(torch.Tensor(embedding_size, self.att_embedding_size))
+
+        self.output_dnn = nn.Linear(self.att_embedding_size, embedding_size, bias=False)
+
+        self.attn_dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(0.1)
+        self.layer_norm = nn.LayerNorm(embedding_size, eps=1e-6)
+
+        if self.use_res:
+            self.W_Res = nn.Parameter(torch.Tensor(embedding_size, embedding_size))
+        for tensor in self.parameters():
+            nn.init.normal_(tensor, mean=0.0, std=0.05)
+
+        self.to(device)
+
+    def forward(self, q,k):
+        q = k
+        v = k
+        # None F D
+        # print('q',q.shape)
+        # print('self.W_Query',self.W_Query.shape)
+        querys = torch.tensordot(q, self.W_Query, dims=([-1], [0]))
+        # print('querys',querys.shape)
+        keys = torch.tensordot(k, self.W_Key, dims=([-1], [0]))
+        values = torch.tensordot(v, self.W_Value, dims=([-1], [0]))
+
+
+        inner_product = torch.matmul(querys, keys.transpose(0, 1))
+        # print('inner_product',inner_product.shape)
+        if self.scaling:
+            inner_product /= self.att_embedding_size ** 0.5
+        self.normalized_att_scores = self.attn_dropout(F.softmax(inner_product, dim=-1))  # head_num None F F
+
+        result = torch.matmul(self.normalized_att_scores, values)  # head_num None F D/head_num
+        result = self.output_dnn(result)
+
+        result = self.dropout(result)#=======
+        # if self.use_res:
+        #     result += torch.tensordot(q, self.W_Res, dims=([-1], [0]))
+        result = F.relu(result)
+        result = self.layer_norm(result)#===
+
+        return result
 
 
 test_visual_ids=[ 1453289, 42966022, 24205824, 16064524, 25503516,  3816928,

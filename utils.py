@@ -265,7 +265,7 @@ def get_activation_function(activation: str = 'PReLU') -> nn.Module:
 
 def get_aliccp_ctr_df(path, cols, k=3):
     print(cols)
-    h5_path = '/home/featurize/work/data/alicpp.h5'
+    h5_path = '../alicpp.h5'
     f = h5py.File(h5_path, 'r')
     group = f[path]
     data_dict = {}

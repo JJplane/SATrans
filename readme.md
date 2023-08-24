@@ -13,6 +13,19 @@ The preprocessed dataset can be downloaded from [link](https://drive.google.com/
 --flag:  the flag of different functions
 --meta_mode:  apply meta_mlp over Q/K/V, should be a string,e.g., "QK","Q","QKV",where "QK" has the best performance 
 ```
+- install
+```
+conda create -n satrans python=3.7
+source activate satrans
+pip install scikit-learn==1.0.1
+pip install pandas
+pip install deepctr-torch==0.2.9
+pip install psutil
+pip3 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+pip install torch_scatter
+<!-- conda install tensorflow==2.7.0 -->
+```
+
 
 - Run SATrans(EN+MetaNet) on aliccp dataset  (Best performance)
 ```

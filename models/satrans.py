@@ -254,22 +254,3 @@ class SATrans(BaseModel):
         logit += self.dnn_linear(stack_out)
         y_pred = torch.sigmoid(logit)
         return y_pred
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
