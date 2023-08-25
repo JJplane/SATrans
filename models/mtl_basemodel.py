@@ -249,7 +249,8 @@ class BaseModel(nn.Module):
             trained_num = 0
 
             try:
-                with tqdm(enumerate(train_loader), disable=verbose != 1) as t:
+                with tqdm(enumerate(train_loader), disable=verbose != 1, total=steps_per_epoch,
+                            desc='Epoch {}/{}'.format(epoch + 1, epochs)) as t:
                     for _, (x_train, y_train) in t:
                         x = x_train.to(self.device).float()
                         y = y_train.to(self.device).float()

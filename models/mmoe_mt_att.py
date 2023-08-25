@@ -129,12 +129,12 @@ class MMOE_MT_ATT(BaseModel):
         # print('num_domains',num_domains)
         self.domain_embeddings = nn.Embedding(num_domains+1, embedding_size)
         self.lhuc = nn.ModuleList([nn.ModuleList([
-                        nn.Linear(embedding_size, 128, bias=False),
+                        nn.Linear(tower_dnn_hidden_units[-1], 128, bias=False),
                         nn.ReLU(),
                         nn.Linear(128, 64, bias=False),
                         nn.Sigmoid()
                     ]) for _ in range(self.num_tasks)])
-        self.target_attention = nn.ModuleList([Attention_Layer(self.embedding_size, 4, True, device=device) for _ in range(self.num_tasks)])
+        self.target_attention = nn.ModuleList([Attention_Layer(tower_dnn_hidden_units[-1], 4, True, device=device) for _ in range(self.num_tasks)])
         self.to(device)
     def forward(self, X):
         sparse_embedding_list, dense_value_list = self.input_from_feature_columns(X, self.dnn_feature_columns,
@@ -196,7 +196,7 @@ class MMOE_MT_ATT(BaseModel):
         for i in range(self.num_tasks):
             if len(self.tower_dnn_hidden_units) > 0:
                 tower_dnn_out = self.tower_dnn[i](mmoe_outs[i])
-                att = self.target_attention[i](tower_dnn_out, domain_emb)
+                att = self.target_attention[i](domain_emb,tower_dnn_out)
                 # print('att',att)
                 for layer in self.lhuc[i]:
                     att = layer(att)
@@ -264,6 +264,15 @@ class MMOE_MT_ATT(BaseModel):
 # Domain 3 test AUC 0.5941
 # 08-24-15-21
 # att中间层加宽
+# test AUC 0.6152
+# Domain 1 test AUC 0.6189
+# Domain 2 test AUC 0.6138
+# Domain 3 test AUC 0.5949
+# 纠正
+# test AUC 0.6193
+# Domain 1 test AUC 0.6216
+# Domain 2 test AUC 0.618
+# Domain 3 test AUC 0.5954
 
 # export url='https://fastly.jsdelivr.net/gh/juewuy/ShellClash@master' && sudo wget -q --no-check-certificate -O /tmp/install.sh $url/install.sh  && sudo bash /tmp/install.sh && source /etc/profile &> /dev/null
 

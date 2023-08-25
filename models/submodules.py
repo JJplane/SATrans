@@ -79,10 +79,16 @@ class MetaNet(nn.Module):
         bias_list = []
         offset = 0
         for i in range(len(self.meta_dnn_hidden_units) - 1):
+            # print("i",i)
+            # print("mlp_params",mlp_params.shape)
+            # 8192, 4096
             domain_weight = mlp_params[:,
                             offset:offset + self.meta_dnn_hidden_units[i] * self.meta_dnn_hidden_units[i + 1]].reshape(
                 -1, self.meta_dnn_hidden_units[i], self.meta_dnn_hidden_units[i + 1])
+            
+            # print("domain_weight",domain_weight.shape)
             offset += self.meta_dnn_hidden_units[i] * self.meta_dnn_hidden_units[i + 1]
+            # print("offset",offset)
             weight_list.append(domain_weight)
 
         residual = x
@@ -90,7 +96,10 @@ class MetaNet(nn.Module):
             bias_list = [bias.unsqueeze(1).expand(bias.shape[0],x.shape[1],bias.shape[1]) for bias in bias_list]
         else:
             bias_list=[0.0]*len(weight_list)
-
+        # print("weight_list[0]",weight_list[0].shape)
+        # [8192, 32, 64]
+        # print("weight_list[1]",weight_list[1].shape)
+        # [8192, 64, 32]
         for i in range(len(weight_list)):
             x=x@weight_list[i]+bias_list[i]
             if i<len(weight_list)-1:

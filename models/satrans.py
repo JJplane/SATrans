@@ -146,7 +146,10 @@ class SATrans(BaseModel):
         meta_dnn_hidden_units=[int(x) for x in meta_dnn_hidden_units]
         print(meta_dnn_hidden_units)#print the dimension of meta_dnn_dimensions
         meta_dnn_hidden_units=[embedding_size]+list(meta_dnn_hidden_units)
+        # [32,64,32]
         self.meta_dnn_hidden_units=meta_dnn_hidden_units
+        print("meta_dnn_hidden_units",meta_dnn_hidden_units)
+        
 
         self.domain_int_layers = nn.ModuleList(
             [Meta_Transformer_Layer(embedding_size,meta_dnn_hidden_units,flag, meta_mode,
@@ -215,6 +218,9 @@ class SATrans(BaseModel):
 
 
         if 'pos' not in self.flag:#all positions share the same metanet
+            
+            # print('before domain_map_dnn_Q',domain_emb.shape)
+            # 8192, 32
             domain_vec_Q = self.domain_map_dnn_Q(domain_emb)
             domain_vec_K = domain_vec_V = domain_vec_Q
             domain_dnn_param_list = [domain_vec_Q,domain_vec_K,domain_vec_V]
@@ -233,11 +239,17 @@ class SATrans(BaseModel):
                     domain_vec = self.domain_map_dnn_Q(all_emb)
                     domain_dnn_param_list.append(domain_vec)
 
-
+            # print('layerid',layerid)
+            # print('before att_input',att_input.shape)
+            # print('domain_dnn_param_list',domain_dnn_param_list[0].shape)
+            # layerid 0
+            # att_input torch.Size([8192, 19, 32])
+            # domain_dnn_param_list torch.Size([8192, 4096])
             att_input = layer(att_input,
                             domain_dnn_param_list[0],
                             domain_dnn_param_list[1],
                             domain_dnn_param_list[2],domain_dnn_param_list[0])
+            # print('after att_input',att_input.shape)
 
 
 
@@ -254,3 +266,8 @@ class SATrans(BaseModel):
         logit += self.dnn_linear(stack_out)
         y_pred = torch.sigmoid(logit)
         return y_pred
+
+# test AUC 0.6222
+# Domain 1 test AUC 0.6232
+# Domain 2 test AUC 0.6215
+# Domain 3 test AUC 0.6017
